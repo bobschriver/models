@@ -348,7 +348,7 @@ def random_horizontal_flip(
         tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.5))
 
     # flip image
-    image = tf.cond(do_a_flip_random, lambda: _flip_image(image), lambda: image)
+    image = tf.cond(do_a_flip_random, lambda: _flip_image_left_right(image), lambda: image)
     result.append(image)
 
     # flip boxes
@@ -430,7 +430,7 @@ def random_vertical_flip(
         tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.25))
 
     # flip image
-    image = tf.cond(do_a_flip_random, lambda: _flip_image(image), lambda: image)
+    image = tf.cond(do_a_flip_random, lambda: _flip_image_up_down(image), lambda: image)
     result.append(image)
 
     # flip boxes
@@ -441,7 +441,7 @@ def random_vertical_flip(
 
     return tuple(result)
 
-def random_rotation_90(
+def random_rotate_90(
     image,
     boxes=None,
     seed=None):
@@ -1980,6 +1980,8 @@ def get_default_func_arg_map(include_instance_masks=False,
                                groundtruth_instance_masks,
                                groundtruth_keypoints,),
       random_vertical_flip: (fields.InputDataFields.image,
+                             fields.InputDataFields.groundtruth_boxes,),
+      random_rotate_90: (fields.InputDataFields.image,
                              fields.InputDataFields.groundtruth_boxes,),
       random_pixel_value_scale: (fields.InputDataFields.image,),
       random_image_scale: (fields.InputDataFields.image,

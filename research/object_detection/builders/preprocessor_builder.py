@@ -87,6 +87,8 @@ PREPROCESSING_FUNCTION_MAP = {
     'scale_boxes_to_pixel_coordinates': (
         preprocessor.scale_boxes_to_pixel_coordinates),
     'subtract_channel_mean': preprocessor.subtract_channel_mean,
+	'random_vertical_flip': preprocessor.random_vertical_flip,
+	'random_rotate_90': preprocessor.random_rotate_90,
 }
 
 
