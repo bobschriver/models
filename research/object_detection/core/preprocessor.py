@@ -203,19 +203,25 @@ def rotate_boxes_90(boxes):
   centered_xmin = tf.subtract(xmin, 0.5)
   centered_ymax = tf.subtract(ymax, 0.5)
   centered_xmax = tf.subtract(xmax, 0.5)
+ 
+  # Yes, this swap is intentional. For rotation, x=y, y=-x 
+  rotated_ymin = tf.multiply(centered_xmin, -1.0)
+  rotated_xmin = tf.multiply(centered_ymin, 1.0)
+  rotated_ymax = tf.multiply(centered_xmax, -1.0)
+  rotated_xmax = tf.multiply(centered_ymax, 1.0)
   
-  rotated_ymin = tf.multiply(ymin, -1.0)
-  rotated_xmin = tf.multiply(xmin, 1.0)
-  rotated_ymax = tf.multiply(ymax, -1.0)
-  rotated_xmax = tf.multiply(xmax, 1.0)
-  
-  normalized_ymin = tf.add(ymin, 0.5)
-  normalized_xmin = tf.add(xmin, 0.5)
-  normalized_ymax = tf.add(ymax, 0.5)
-  normalized_xmax = tf.add(xmax, 0.5)
+  normalized_ymin = tf.add(rotated_ymin, 0.5)
+  normalized_xmin = tf.add(rotated_xmin, 0.5)
+  normalized_ymax = tf.add(rotated_ymax, 0.5)
+  normalized_xmax = tf.add(rotated_xmax, 0.5)
 
-  rotated_boxes = tf.concat([normalized_ymin, normalized_xmin, normalized_ymax, normalized_xmax], 1)
-  return flipped_boxes  
+  new_ymin = tf.minimum(normalized_ymin, normalized_ymax)
+  new_xmin = tf.minimum(normalized_xmin, normalized_xmax)
+  new_ymax = tf.maximum(normalized_ymax, normalized_ymin)
+  new_xmax = tf.maximum(normalized_xmax, normalized_xmin)
+
+  rotated_boxes = tf.concat([new_ymin, new_xmin, new_ymax, new_xmax], 1)
+  return rotated_boxes
 
 def retain_boxes_above_threshold(
     boxes, labels, label_scores, masks=None, keypoints=None, threshold=0.0):
@@ -345,7 +351,7 @@ def random_horizontal_flip(
     do_a_flip_random = tf.random_uniform([], seed=seed)
     # flip only if there are bounding boxes in image!
     do_a_flip_random = tf.logical_and(
-        tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.5))
+        tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.4))
 
     # flip image
     image = tf.cond(do_a_flip_random, lambda: _flip_image_left_right(image), lambda: image)
@@ -427,7 +433,7 @@ def random_vertical_flip(
     do_a_flip_random = tf.random_uniform([], seed=seed)
     # flip only if there are bounding boxes in image!
     do_a_flip_random = tf.logical_and(
-        tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.25))
+        tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.4))
 
     # flip image
     image = tf.cond(do_a_flip_random, lambda: _flip_image_up_down(image), lambda: image)
@@ -472,6 +478,7 @@ def random_rotate_90(
   """
   def _rotate_image_90(image):
     # flip image
+    print('Rotating Image')
     image_rotated = tf.image.rot90(image)
     return image_rotated
 
@@ -481,7 +488,7 @@ def random_rotate_90(
     do_a_rotate_random = tf.random_uniform([], seed=seed)
     # flip only if there are bounding boxes in image!
     do_a_rotate_random = tf.logical_and(
-        tf.greater(tf.size(boxes), 0), tf.greater(do_a_rotate_random, 0.25))
+        tf.greater(tf.size(boxes), 0), tf.greater(do_a_rotate_random, 0.4))
 
     # flip image
     image = tf.cond(do_a_rotate_random, lambda: _rotate_image_90(image), lambda: image)
@@ -1161,10 +1168,17 @@ def random_crop_pad_image(image,
   image_size = tf.shape(image)
   image_height = image_size[0]
   image_width = image_size[1]
+
   if min_padded_size_ratio is None:
     min_padded_size_ratio = tf.constant([0.0, 0.0], tf.float32)
+  else:
+    min_padded_size_ratio = tf.constant(map(float, min_padded_size_ratio), tf.float32)
+
   if max_padded_size_ratio is None:
     max_padded_size_ratio = tf.constant([2.0, 2.0], tf.float32)
+  else:
+    max_padded_size_ratio = tf.constant(map(float, max_padded_size_ratio), tf.float32)
+
   cropped_image, cropped_boxes, cropped_labels = random_crop_image(
       image=image,
       boxes=boxes,

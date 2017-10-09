@@ -79,7 +79,9 @@ class FasterRCNNResnetV1FeatureExtractor(
         tensor representing a batch of images.
 
     """
-    channel_means = [123.68, 116.779, 103.939]
+	# Red Infrared DEM
+    channel_means = [139.22, 141.13,  45.71]
+    # channel_means = [123.68, 116.779, 103.939]
     return resized_inputs - [[channel_means]]
 
   def _extract_proposal_features(self, preprocessed_inputs, scope):
