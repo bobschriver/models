@@ -19,6 +19,7 @@ import copy
 import logging
 import os
 import time
+import math
 
 import numpy as np
 import tensorflow as tf
@@ -160,6 +161,37 @@ def evaluate_detection_results_pascal_voc(result_lists,
         metrics[display_name] = per_class_corloc[idx]
   return metrics
 
+def evaluate_detection_results_tree(result_lists,
+                                    categories):
+    num_results = len(result_lists)
+    print(num_results)
+    
+    tree_count_residuals_sum = 0
+    canopy_area_residuals_sum = 0
+    for result in result_lists:
+        tree_count_residuals_sum = tree_count_residuals_sum + math.pow(len(result['groundtruth_boxes']) - lent(result['detection_boxes']))
+        
+        groundtruth_canopy_area = 0
+        for ymin,xmin,ymax,xmax in result['groundtruth_boxes']:
+            box_area = (ymax - ymin) * (xmax - xmin)
+            groundtruth_canopy_area = groundtruth_canopy_area = box_area
+        
+        detection_canopy_area = 0
+        for ymin,xmin,ymax,xmax in results['detection_boxes']:
+            box_area = (ymax - ymin) * (xmax - xmin)
+            detection_canopy_area = detection_canopy_area + box_area
+        
+        canopy_area_residuals_sum = canopy_area_residuals_sum + math.pow(groundtruth_canopy_area - detection_canopy_area)
+    
+    print(tree_count_residuals_sum)
+    print(canopy_area_residuals_sum)
+    
+    tree_count_rmse = math.sqrt(tree_count_residuals_sum / num_results)
+    canopy_area_rmse = math.sqrt(canopy_area_residuals_sum / num_results)
+    
+    metrics = {'Tree Count RMSE' : tree_count_rmse, 'Canopy Area RMSE' : canopy_area_rmse}
+    print(metrics)
+    return metrics
 
 # TODO: Add tests.
 def visualize_detection_results(result_dict,
