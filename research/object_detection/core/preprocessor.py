@@ -351,7 +351,7 @@ def random_horizontal_flip(
     do_a_flip_random = tf.random_uniform([], seed=seed)
     # flip only if there are bounding boxes in image!
     do_a_flip_random = tf.logical_and(
-        tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.4))
+        tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.5))
 
     # flip image
     image = tf.cond(do_a_flip_random, lambda: _flip_image_left_right(image), lambda: image)
@@ -433,7 +433,7 @@ def random_vertical_flip(
     do_a_flip_random = tf.random_uniform([], seed=seed)
     # flip only if there are bounding boxes in image!
     do_a_flip_random = tf.logical_and(
-        tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.4))
+        tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.5))
 
     # flip image
     image = tf.cond(do_a_flip_random, lambda: _flip_image_up_down(image), lambda: image)
@@ -488,7 +488,7 @@ def random_rotate_90(
     do_a_rotate_random = tf.random_uniform([], seed=seed)
     # flip only if there are bounding boxes in image!
     do_a_rotate_random = tf.logical_and(
-        tf.greater(tf.size(boxes), 0), tf.greater(do_a_rotate_random, 0.4))
+        tf.greater(tf.size(boxes), 0), tf.greater(do_a_rotate_random, 0.5))
 
     # flip image
     image = tf.cond(do_a_rotate_random, lambda: _rotate_image_90(image), lambda: image)
