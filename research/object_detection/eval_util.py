@@ -163,25 +163,55 @@ def evaluate_detection_results_pascal_voc(result_lists,
 
 def evaluate_detection_results_tree(result_lists,
                                     categories):
-    num_results = len(result_lists)
+    num_results = len(result_lists['image_id'])
     print(num_results)
-    
     tree_count_residuals_sum = 0
     canopy_area_residuals_sum = 0
-    for result in result_lists:
-        tree_count_residuals_sum = tree_count_residuals_sum + math.pow(len(result['groundtruth_boxes']) - lent(result['detection_boxes']))
-        
-        groundtruth_canopy_area = 0
-        for ymin,xmin,ymax,xmax in result['groundtruth_boxes']:
-            box_area = (ymax - ymin) * (xmax - xmin)
-            groundtruth_canopy_area = groundtruth_canopy_area = box_area
-        
-        detection_canopy_area = 0
-        for ymin,xmin,ymax,xmax in results['detection_boxes']:
+    
+    print(result_lists['groundtruth_boxes'][0])
+    print(result_lists['detection_boxes'][0])
+    
+    groundtruth_canopy_area = 0
+    groundtruth_count = len(result_lists['groundtruth_boxes'][0])
+    for detection_idx,box in enumerate(result_lists['groundtruth_boxes'][0]):
+        ymin,xmin,ymax,xmax = box
+        box_area = (ymax - ymin) * (xmax - xmin)
+        groundtruth_canopy_area = groundtruth_canopy_area + box_area
+    
+    detection_canopy_area = 0
+    detection_count = 0
+    for detection_idx,box in enumerate(result_lists['detection_boxes'][0]):
+        ymin,xmin,ymax,xmax = box
+        if result_lists['detection_scores'][0][detection_idx] > 0.7:
             box_area = (ymax - ymin) * (xmax - xmin)
             detection_canopy_area = detection_canopy_area + box_area
+                
+            detection_count = detection_count + 1
+    
+    print("Ground Truth Count {} Detection Count {}".format(groundtruth_count, detection_count))
+    print("Ground Truth Canopy Area {} Detection Canopy Area {}".format(groundtruth_canopy_area, detection_canopy_area))
+
+    for idx,image_id in enumerate(result_lists['image_id']):
+        #tree_count_residuals_sum = tree_count_residuals_sum + math.pow(len(result_lists['groundtruth_boxes'][idx]) - len(result_lists['detection_boxes'][idx]), 2)
         
-        canopy_area_residuals_sum = canopy_area_residuals_sum + math.pow(groundtruth_canopy_area - detection_canopy_area)
+        groundtruth_canopy_area = 0
+        groundtruth_count = len(result_lists['groundtruth_boxes'][idx])
+        for ymin,xmin,ymax,xmax in result_lists['groundtruth_boxes'][idx]:
+            box_area = (ymax - ymin) * (xmax - xmin)
+            groundtruth_canopy_area = groundtruth_canopy_area + box_area
+        
+        detection_canopy_area = 0
+        detection_count = 0
+        for detection_idx,box in enumerate(result_lists['detection_boxes'][idx]):
+            ymin,xmin,ymax,xmax = box
+            if result_lists['detection_scores'][idx][detection_idx] > 0.5:
+                box_area = (ymax - ymin) * (xmax - xmin)
+                detection_canopy_area = detection_canopy_area + box_area
+                
+                detection_count = detection_count + 1
+        
+        tree_count_residuals_sum = tree_count_residuals_sum + math.pow(groundtruth_count - detection_count , 2)
+        canopy_area_residuals_sum = canopy_area_residuals_sum + math.pow(groundtruth_canopy_area - detection_canopy_area, 2)
     
     print(tree_count_residuals_sum)
     print(canopy_area_residuals_sum)
