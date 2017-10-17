@@ -93,7 +93,7 @@ def draw_bounding_box_on_image_array(image,
                                      ymax,
                                      xmax,
                                      color='red',
-                                     thickness=4,
+                                     thickness=1,
                                      display_str_list=(),
                                      use_normalized_coordinates=True):
   """Adds a bounding box to an image (numpy array).
@@ -125,7 +125,7 @@ def draw_bounding_box_on_image(image,
                                ymax,
                                xmax,
                                color='red',
-                               thickness=4,
+                               thickness=1,
                                display_str_list=(),
                                use_normalized_coordinates=True):
   """Adds a bounding box to an image.
@@ -331,7 +331,7 @@ def visualize_boxes_and_labels_on_image_array(image,
                                               max_boxes_to_draw=20,
                                               min_score_thresh=.5,
                                               agnostic_mode=False,
-                                              line_thickness=4):
+                                              line_thickness=1):
   """Overlay labeled boxes on an image with formatted scores and label names.
 
   This function groups boxes that correspond to the same location
@@ -414,7 +414,6 @@ def visualize_boxes_and_labels_on_image_array(image,
         xmax,
         color=color,
         thickness=line_thickness,
-        display_str_list=box_to_display_str_map[box],
         use_normalized_coordinates=use_normalized_coordinates)
     if keypoints is not None:
       draw_keypoints_on_image_array(

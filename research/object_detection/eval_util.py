@@ -308,7 +308,8 @@ def visualize_detection_results(result_dict,
         category_index,
         keypoints=groundtruth_keypoints,
         use_normalized_coordinates=False,
-        max_boxes_to_draw=None)
+        max_boxes_to_draw=None,
+        line_thickness=1)
   vis_utils.visualize_boxes_and_labels_on_image_array(
       image,
       detection_boxes,
@@ -320,7 +321,8 @@ def visualize_detection_results(result_dict,
       use_normalized_coordinates=False,
       max_boxes_to_draw=max_num_predictions,
       min_score_thresh=min_score_thresh,
-      agnostic_mode=agnostic_mode)
+      agnostic_mode=agnostic_mode,
+      line_thickness=1)
 
   if export_dir:
     export_path = os.path.join(export_dir, 'export-{}.png'.format(tag))
