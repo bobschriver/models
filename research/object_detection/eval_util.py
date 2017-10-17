@@ -231,7 +231,7 @@ def visualize_detection_results(result_dict,
                                 summary_dir='',
                                 export_dir='',
                                 agnostic_mode=False,
-                                show_groundtruth=False,
+                                show_groundtruth=True,
                                 min_score_thresh=.5,
                                 max_num_predictions=20):
   """Visualizes detection results and writes visualizations to image summaries.
@@ -269,7 +269,7 @@ def visualize_detection_results(result_dict,
       empty (default), then images are not exported.
     agnostic_mode: boolean (default: False) controlling whether to evaluate in
       class-agnostic mode or not.
-    show_groundtruth: boolean (default: False) controlling whether to show
+    show_groundtruth: boolean (default: True) controlling whether to show
       groundtruth boxes in addition to detected boxes
     min_score_thresh: minimum score threshold for a box to be visualized
     max_num_predictions: maximum number of detections to visualize
