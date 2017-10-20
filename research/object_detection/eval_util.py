@@ -231,7 +231,7 @@ def visualize_detection_results(result_dict,
                                 summary_dir='',
                                 export_dir='',
                                 agnostic_mode=False,
-                                show_groundtruth=False,
+                                show_groundtruth=True,
                                 min_score_thresh=.5,
                                 max_num_predictions=20):
   """Visualizes detection results and writes visualizations to image summaries.
@@ -269,7 +269,7 @@ def visualize_detection_results(result_dict,
       empty (default), then images are not exported.
     agnostic_mode: boolean (default: False) controlling whether to evaluate in
       class-agnostic mode or not.
-    show_groundtruth: boolean (default: False) controlling whether to show
+    show_groundtruth: boolean (default: True) controlling whether to show
       groundtruth boxes in addition to detected boxes
     min_score_thresh: minimum score threshold for a box to be visualized
     max_num_predictions: maximum number of detections to visualize
@@ -308,7 +308,8 @@ def visualize_detection_results(result_dict,
         category_index,
         keypoints=groundtruth_keypoints,
         use_normalized_coordinates=False,
-        max_boxes_to_draw=None)
+        max_boxes_to_draw=None,
+        line_thickness=1)
   vis_utils.visualize_boxes_and_labels_on_image_array(
       image,
       detection_boxes,
@@ -320,7 +321,8 @@ def visualize_detection_results(result_dict,
       use_normalized_coordinates=False,
       max_boxes_to_draw=max_num_predictions,
       min_score_thresh=min_score_thresh,
-      agnostic_mode=agnostic_mode)
+      agnostic_mode=agnostic_mode,
+      line_thickness=1)
 
   if export_dir:
     export_path = os.path.join(export_dir, 'export-{}.png'.format(tag))
