@@ -180,8 +180,8 @@ def flip_boxes_up_down(boxes):
   """
   # Flip boxes.
   ymin, xmin, ymax, xmax = tf.split(value=boxes, num_or_size_splits=4, axis=1)
-  flipped_xmin = tf.subtract(1.0, ymax)
-  flipped_xmax = tf.subtract(1.0, ymin)
+  flipped_ymin = tf.subtract(1.0, ymax)
+  flipped_ymax = tf.subtract(1.0, ymin)
   flipped_boxes = tf.concat([flipped_ymin, xmin, flipped_ymax, xmax], 1)
   return flipped_boxes
 
@@ -344,7 +344,7 @@ def random_horizontal_flip(
   if keypoints is not None and keypoint_flip_permutation is None:
     raise ValueError(
         'keypoints are provided but keypoints_flip_permutation is not provided')
-
+  print("Random Horizontal Flip")
   with tf.name_scope('RandomHorizontalFlip', values=[image, boxes]):
     result = []
     # random variable defining whether to do flip or not
@@ -426,7 +426,7 @@ def random_vertical_flip(
     # flip image
     image_flipped = tf.image.flip_up_down(image)
     return image_flipped
-
+  print("Random Vertical Flip")
   with tf.name_scope('RandomVerticalFlip', values=[image, boxes]):
     result = []
     # random variable defining whether to do flip or not
@@ -478,10 +478,10 @@ def random_rotate_90(
   """
   def _rotate_image_90(image):
     # flip image
-    print('Rotating Image')
     image_rotated = tf.image.rot90(image)
     return image_rotated
-
+    
+  print("Random Rotate 90")
   with tf.name_scope('RandomRotate90', values=[image, boxes]):
     result = []
     # random variable defining whether to do flip or not
@@ -1112,7 +1112,7 @@ def random_crop_pad_image(image,
                           aspect_ratio_range=(0.75, 1.33),
                           area_range=(0.1, 1.0),
                           overlap_thresh=0.3,
-                          random_coef=0.0,
+                          random_coef=0.4,
                           min_padded_size_ratio=None,
                           max_padded_size_ratio=None,
                           pad_color=None,
@@ -1344,8 +1344,8 @@ def random_crop_to_aspect_ratio(image,
 
 def random_black_patches(image,
                          max_black_patches=10,
-                         probability=0.5,
-                         size_to_image_ratio=0.1,
+                         probability=0.6,
+                         size_to_image_ratio=0.2,
                          random_seed=None):
   """Randomly adds some black patches to the image.
 
@@ -1394,7 +1394,8 @@ def random_black_patches(image,
                                               image_height, image_width)
     image = tf.multiply(image, mask)
     return image
-
+  
+  print("Random Black Patches")
   with tf.name_scope('RandomBlackPatchInImage', values=[image]):
     for _ in range(max_black_patches):
       random_prob = tf.random_uniform([], minval=0.0, maxval=1.0,
