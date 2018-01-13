@@ -128,7 +128,7 @@ class TfExampleDecoder(data_decoder.DataDecoder):
       label_handler = slim_example_decoder.Tensor('image/object/class/label')
     else:
       label_handler = slim_example_decoder.Tensor('image/object/class/label')
-    self.items_to_handlers[
+   self.items_to_handlers[
         fields.InputDataFields.groundtruth_classes] = label_handler
 
   def decode(self, tf_example_string_tensor):
