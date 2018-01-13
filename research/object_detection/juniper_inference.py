@@ -22,7 +22,7 @@ def load_image_into_numpy_array(image):
 	(im_width, im_height) = image.size
 	return np.array(image.getdata()).reshape((im_height, im_width, 3)).astype(np.uint8)
 
-PATH_TO_CKPT = "/home/pi/schriver/juniper/models/faster_rcnn_resnet101/train/graph/frozen_inference_graph.pb"
+PATH_TO_CKPT = "/home/pi/schriver/juniper/models/faster_rcnn_resnet101/frozen_inference_graph.pb"
 
 detection_graph = tf.Graph()
 with detection_graph.as_default():
@@ -32,22 +32,20 @@ with detection_graph.as_default():
 		od_graph_def.ParseFromString(serialized_graph)
 		tf.import_graph_def(od_graph_def, name='')
 
-PATH_TO_LABELS = "/home/pi/schriver/juniper/data/label_map_lg_juniper_md_juniper_sm_juniper_lg_ponderosa_md_ponderosa_sm_ponderosa.pbtxt"
-NUM_CLASSES = 6
+PATH_TO_LABELS = "/home/pi/schriver/juniper/data/label_map_juniper_ponderosa.pbtxt"
+NUM_CLASSES = 2
 
 label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
 categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=NUM_CLASSES, use_display_name=True)
 category_index = label_map_util.create_category_index(categories)
 
-print(categories)
-print(category_index)
 
 # For the sake of simplicity we will use only 2 images:
 # image1.jpg
 # image2.jpg
 # If you want to test the code with your images, just add path to the images to the TEST_IMAGE_PATHS.
-PATH_TO_TEST_IMAGES_DIR = "/home/pi/schriver/juniper/data/test/jpg"
-TEST_IMAGE_PATHS = glob.glob(os.path.join(PATH_TO_TEST_IMAGES_DIR, "*.jpg"))
+PATH_TO_TEST_IMAGES_DIR = "/home/pi/schriver/juniper/data/eval/png"
+TEST_IMAGE_PATHS = glob.glob(os.path.join(PATH_TO_TEST_IMAGES_DIR, "*.png"))
 
 PATH_TO_TEST_IMAGES_OUTPUT = "/home/pi/schriver/juniper/data/test/image_output"
 PATH_TO_XML_OUTPUT = "/home/pi/schriver/juniper/data/test/label_output"
@@ -65,7 +63,7 @@ with detection_graph.as_default():
 
 			annotation = ET.Element("annotation")
 			
-			ET.SubElement(annotation, "folder").text = "jpg"
+			ET.SubElement(annotation, "folder").text = "png"
 			ET.SubElement(annotation, "filename").text = image_filename
 
 			size = ET.SubElement(annotation, "size")
@@ -120,7 +118,7 @@ with detection_graph.as_default():
 				min_score_thresh=0.5,
 				line_thickness=1)
 
-			export_path = os.path.join(PATH_TO_TEST_IMAGES_OUTPUT, image_filename + '.jpg')
+			export_path = os.path.join(PATH_TO_TEST_IMAGES_OUTPUT, image_filename + '.png')
 			vis_util.save_image_array_as_png(image_np, export_path)
 			
 		print(time.time())

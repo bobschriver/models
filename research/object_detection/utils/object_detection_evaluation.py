@@ -32,6 +32,7 @@ from abc import abstractmethod
 import collections
 import logging
 import numpy as np
+import math
 
 from object_detection.core import standard_fields
 from object_detection.utils import label_map_util
@@ -100,6 +101,131 @@ class DetectionEvaluator(object):
     """Clears the state to prepare for a fresh evaluation."""
     pass
 
+class TreeEvaluator(DetectionEvaluator):
+  """A class to evaluate detections."""
+
+  def __init__(self,
+               categories,
+               matching_iou_threshold=0.5,
+               metric_prefix=None,
+               use_weighted_mean_ap=False):
+    """Constructor.
+
+    Args:
+      categories: A list of dicts, each of which has the following keys -
+        'id': (required) an integer id uniquely identifying this category.
+        'name': (required) string representing category name e.g., 'cat', 'dog'.
+      matching_iou_threshold: IOU threshold to use for matching groundtruth
+        boxes to detection boxes.
+      evaluate_corlocs: (optional) boolean which determines if corloc scores
+        are to be returned or not.
+      metric_prefix: (optional) string prefix for metric name; if None, no
+        prefix is used.
+      use_weighted_mean_ap: (optional) boolean which determines if the mean
+        average precision is computed directly from the scores and tp_fp_labels
+        of all classes.
+    """
+    super(TreeEvaluator, self).__init__(categories)
+    self._num_classes = max([cat['id'] for cat in categories])
+    self._matching_iou_threshold = matching_iou_threshold
+    self._use_weighted_mean_ap = use_weighted_mean_ap
+    self._label_id_offset = 1
+    self._evaluation = TreeEvaluation(
+        self._num_classes,
+        matching_iou_threshold=self._matching_iou_threshold,
+        label_id_offset=self._label_id_offset)
+    self._image_ids = set([])
+    self._metric_prefix = (metric_prefix + '/') if metric_prefix else ''
+
+  def add_single_ground_truth_image_info(self, image_id, groundtruth_dict):
+    """Adds groundtruth for a single image to be used for evaluation.
+
+    Args:
+      image_id: A unique string/integer identifier for the image.
+      groundtruth_dict: A dictionary containing -
+        standard_fields.InputDataFields.groundtruth_boxes: float32 numpy array
+          of shape [num_boxes, 4] containing `num_boxes` groundtruth boxes of
+          the format [ymin, xmin, ymax, xmax] in absolute image coordinates.
+        standard_fields.InputDataFields.groundtruth_classes: integer numpy array
+          of shape [num_boxes] containing 1-indexed groundtruth classes for the
+          boxes.
+        standard_fields.InputDataFields.groundtruth_difficult: Optional length
+          M numpy boolean array denoting whether a ground truth box is a
+          difficult instance or not. This field is optional to support the case
+          that no boxes are difficult.
+
+    Raises:
+      ValueError: On adding groundtruth for an image more than once.
+    """
+    if image_id in self._image_ids:
+      raise ValueError('Image with id {} already added.'.format(image_id))
+
+    groundtruth_classes = groundtruth_dict[
+        standard_fields.InputDataFields.groundtruth_classes]
+    groundtruth_classes -= self._label_id_offset
+    self._evaluation.add_single_ground_truth_image_info(
+        image_id,
+        groundtruth_dict[standard_fields.InputDataFields.groundtruth_boxes],
+        groundtruth_classes)
+    self._image_ids.update([image_id])
+
+  def add_single_detected_image_info(self, image_id, detections_dict):
+    """Adds detections for a single image to be used for evaluation.
+
+    Args:
+      image_id: A unique string/integer identifier for the image.
+      detections_dict: A dictionary containing -
+        standard_fields.DetectionResultFields.detection_boxes: float32 numpy
+          array of shape [num_boxes, 4] containing `num_boxes` detection boxes
+          of the format [ymin, xmin, ymax, xmax] in absolute image coordinates.
+        standard_fields.DetectionResultFields.detection_scores: float32 numpy
+          array of shape [num_boxes] containing detection scores for the boxes.
+        standard_fields.DetectionResultFields.detection_classes: integer numpy
+          array of shape [num_boxes] containing 1-indexed detection classes for
+          the boxes.
+    """
+    detection_classes = detections_dict[
+        standard_fields.DetectionResultFields.detection_classes]
+    detection_classes -= self._label_id_offset
+    self._evaluation.add_single_detected_image_info(
+        image_id,
+        detections_dict[standard_fields.DetectionResultFields.detection_boxes],
+        detections_dict[standard_fields.DetectionResultFields.detection_scores],
+        detection_classes)
+
+  def evaluate(self):
+    """Compute evaluation result.
+
+    Returns:
+      A dictionary of metrics with the following fields -
+
+      1. summary_metrics:
+        'Precision/mAP@<matching_iou_threshold>IOU': mean average precision at
+        the specified IOU threshold.
+
+      2. per_category_ap: category specific results with keys of the form
+        'PerformanceByCategory/mAP@<matching_iou_threshold>IOU/category'.
+    """
+    (tree_count_rmse, canopy_area_rmse, canopy_area_percentage_rmse, canopy_area_same_bin_percentage, canopy_area_neighboring_bin_percentage) = (
+        self._evaluation.evaluate())
+        
+    tree_metrics = {
+        self._metric_prefix + 'Tree Count RMSE': tree_count_rmse,
+        self._metric_prefix + 'Canopy Area RMSE': canopy_area_rmse,
+        self._metric_prefix + 'Canopy Area Percentage RMSE': canopy_area_percentage_rmse,
+        self._metric_prefix + 'Canopy Area Same Bin': canopy_area_same_bin_percentage,
+        self._metric_prefix + 'Canopy Area Neigboring Bin': canopy_area_neighboring_bin_percentage
+    }
+    
+    return tree_metrics
+
+  def clear(self):
+    """Clears the state to prepare for a fresh evaluation."""
+    self._evaluation = ObjectDetectionEvaluation(
+        self._num_classes,
+        matching_iou_threshold=self._matching_iou_threshold,
+        label_id_offset=self._label_id_offset)
+    self._image_ids.clear()
 
 class ObjectDetectionEvaluator(DetectionEvaluator):
   """A class to evaluate detections."""
@@ -249,7 +375,7 @@ class ObjectDetectionEvaluator(DetectionEvaluator):
         label_id_offset=self._label_id_offset)
     self._image_ids.clear()
 
-
+    
 class PascalDetectionEvaluator(ObjectDetectionEvaluator):
   """A class to evaluate detections using PASCAL metrics."""
 
@@ -587,3 +713,173 @@ class ObjectDetectionEvaluation(object):
     return ObjectDetectionEvalMetrics(
         self.average_precision_per_class, mean_ap, self.precisions_per_class,
         self.recalls_per_class, self.corloc_per_class, mean_corloc)
+
+TreeEvalMetrics = collections.namedtuple(
+    'TreeEvalMetrics', [
+        'tree_count_rmse', 
+        'canopy_area_rmse', 
+        'canopy_area_percentage_rmse', 
+        'canopy_area_same_bin_percentage',
+        'canopy_area_neighboring_bin_percentage'
+    ])
+        
+class TreeEvaluation(object):
+  """Internal implementation of Pascal object detection metrics."""
+
+  def __init__(self,
+               num_groundtruth_classes,
+               matching_iou_threshold=0.5,
+               nms_iou_threshold=1.0,
+               nms_max_output_boxes=10000,
+               label_id_offset=0):
+    self.per_image_eval = per_image_evaluation.PerImageEvaluation(
+        num_groundtruth_classes, matching_iou_threshold, nms_iou_threshold,
+        nms_max_output_boxes)
+    self.num_class = num_groundtruth_classes
+    self.label_id_offset = label_id_offset
+
+    self.groundtruth_boxes = {}
+    self.groundtruth_class_labels = {}
+    
+    self.detection_keys = set()
+    
+    self.num_gt_instances = 0.0
+    self.num_gt_imgs = 0.0
+    
+    self.tree_count_residuals = 0.0
+    self.canopy_area_residuals = 0.0
+    
+    self.canopy_area_percentage_residuals = 0.0
+    
+    self.canopy_area_same_bin = 0.0
+    self.canopy_area_neighboring_bin = 0.0
+
+
+  def clear_detections(self):
+    self.tree_count_residuals = 0.0
+    self.canopy_area_residuals = 0.0
+
+  def _update_ground_truth_statistics(self, groundtruth_class_labels):
+    """Update grouth truth statitistics.
+
+    1. Difficult boxes are ignored when counting the number of ground truth
+    instances as done in Pascal VOC devkit.
+    2. Difficult boxes are treated as normal boxes when computing CorLoc related
+    statitistics.
+
+    Args:
+      groundtruth_class_labels: An integer numpy array of length M,
+          representing M class labels of object instances in ground truth
+    """
+    self.num_gt_imgs = self.num_gt_imgs + 1   
+    
+  def add_single_ground_truth_image_info(self,
+                                         image_key,
+                                         groundtruth_boxes,
+                                         groundtruth_class_labels):
+    """Adds groundtruth for a single image to be used for evaluation.
+
+    Args:
+      image_key: A unique string/integer identifier for the image.
+      groundtruth_boxes: float32 numpy array of shape [num_boxes, 4]
+        containing `num_boxes` groundtruth boxes of the format
+        [ymin, xmin, ymax, xmax] in absolute image coordinates.
+    """
+
+    if image_key in self.groundtruth_boxes:
+      logging.warn(
+          'image %s has already been added to the ground truth database.',
+          image_key)
+      return
+      
+    self.groundtruth_boxes[image_key] = groundtruth_boxes
+    self.groundtruth_class_labels[image_key] = groundtruth_class_labels
+    num_boxes = groundtruth_boxes.shape[0]
+
+    self._update_ground_truth_statistics(groundtruth_class_labels)
+
+  def add_single_detected_image_info(self, image_key, detected_boxes,
+                                     detected_scores, detected_class_labels):
+    """Adds detections for a single image to be used for evaluation.
+
+    Args:
+      image_key: A unique string/integer identifier for the image.
+      detected_boxes: float32 numpy array of shape [num_boxes, 4]
+        containing `num_boxes` detection boxes of the format
+        [ymin, xmin, ymax, xmax] in absolute image coordinates.
+      detected_scores: float32 numpy array of shape [num_boxes] containing
+        detection scores for the boxes.
+      detected_class_labels: integer numpy array of shape [num_boxes] containing
+        0-indexed detection classes for the boxes.
+
+    Raises:
+      ValueError: if the number of boxes, scores and class labels differ in
+        length.
+    """
+    
+    if (len(detected_boxes) != len(detected_scores) or
+        len(detected_boxes) != len(detected_class_labels)):
+      raise ValueError('detected_boxes, detected_scores and '
+                       'detected_class_labels should all have same lengths. Got'
+                       '[%d, %d, %d]' % len(detected_boxes),
+                       len(detected_scores), len(detected_class_labels))
+
+    if image_key in self.detection_keys:
+      logging.warn(
+          'image %s has already been added to the detection result database',
+          image_key)
+      return
+
+    self.detection_keys.add(image_key)
+    if image_key in self.groundtruth_boxes:
+      groundtruth_boxes = self.groundtruth_boxes[image_key]
+      groundtruth_class_labels = self.groundtruth_class_labels[image_key]
+    else:
+      groundtruth_boxes = np.empty(shape=[0, 4], dtype=float)
+      groundtruth_class_labels = np.array([], dtype=int)
+      
+    tree_count_diff, canopy_area_diff, canopy_area_percentage_diff, canopy_area_percentage_bin_diff = (
+        self.per_image_eval.compute_tree_metrics(
+            detected_boxes, detected_scores, detected_class_labels,
+            groundtruth_boxes, groundtruth_class_labels))
+    
+    print("Tree Count Diff {} Canopy Area Diff {} Canopy Area Percentage Diff {} Canopy Area Percentage Bin Diff {}".format(
+        tree_count_diff, canopy_area_diff, canopy_area_percentage_diff, canopy_area_percentage_bin_diff))
+
+    self.tree_count_residuals += math.pow(tree_count_diff, 2)
+    self.canopy_area_residuals += math.pow(canopy_area_diff, 2)
+    
+    self.canopy_area_percentage_residuals += math.pow(canopy_area_percentage_diff, 2)
+    
+    if canopy_area_percentage_bin_diff <= 1.0 and canopy_area_percentage_bin_diff >= -1.0:
+        self.canopy_area_neighboring_bin += 1
+        if canopy_area_percentage_bin_diff == 0.0:
+            self.canopy_area_same_bin += 1
+    
+    print("Canopy Area Same Bin {} Canopy Area Neigboring Bin {}".format(self.canopy_area_same_bin, self.canopy_area_neighboring_bin))
+    print("Tree Count Residuals {} Canopy Area Residuals {}".format(self.tree_count_residuals, self.canopy_area_residuals))
+
+
+  def evaluate(self):
+    """Compute evaluation result.
+
+    Returns:
+      A named tuple with the following fields -
+        tree count rmse
+        canopy area rmse
+        canopy area percentage rmse
+        canopy area same percentage bin (within 10%)
+        canopy area neighboring percentage bin (within 30%)
+    """
+    
+    tree_count_rmse = math.sqrt(self.tree_count_residuals / self.num_gt_imgs)
+    canopy_area_rmse = math.sqrt(self.canopy_area_residuals / self.num_gt_imgs)
+    
+    canopy_area_percentage_rmse = math.sqrt(self.canopy_area_percentage_residuals / self.num_gt_imgs)
+    
+    canopy_area_same_bin_percentage = (self.canopy_area_same_bin / self.num_gt_imgs)
+    canopy_area_neighboring_bin_percentage = (self.canopy_area_neighboring_bin / self.num_gt_imgs)
+    
+    print("Canopy Area Same Bin Percentage {}".format(canopy_area_same_bin_percentage))
+    
+    return TreeEvalMetrics(tree_count_rmse, canopy_area_rmse, canopy_area_percentage_rmse, canopy_area_same_bin_percentage, canopy_area_neighboring_bin_percentage)

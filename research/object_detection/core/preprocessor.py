@@ -352,7 +352,7 @@ def random_horizontal_flip(image,
     ValueError: if keypoints are provided but keypoint_flip_permutation is not.
   """
 
-  def _flip_image(image):
+  def _flip_image_left_right(image):
     # flip image
     image_flipped = tf.image.flip_left_right(image)
     return image_flipped
@@ -390,73 +390,6 @@ def random_horizontal_flip(image,
           lambda: keypoint_ops.flip_horizontal(keypoints, 0.25, permutation),
           lambda: keypoints)
       result.append(keypoints)
-
-    return tuple(result)
-
-def random_vertical_flip(
-    image,
-    boxes=None,
-    seed=None):
-  """Randomly decides whether to mirror the image and detections or not.
-
-  The probability of flipping the image is 25%.
-
-  Args:
-    image: rank 3 float32 tensor with shape [height, width, channels].
-    boxes: (optional) rank 2 float32 tensor with shape [N, 4]
-           containing the bounding boxes.
-           Boxes are in normalized form meaning their coordinates vary
-           between [0, 1].
-           Each row is in the form of [ymin, xmin, ymax, xmax].
-    masks: (optional) rank 3 float32 tensor with shape
-           [num_instances, height, width] containing instance masks. The masks
-           are of the same height, width as the input `image`.
-    keypoints: (optional) rank 3 float32 tensor with shape
-               [num_instances, num_keypoints, 2]. The keypoints are in y-x
-               normalized coordinates.
-    keypoint_flip_permutation: rank 1 int32 tensor containing keypoint flip
-                               permutation.
-    seed: random seed
-
-  Returns:
-    image: image which is the same shape as input image.
-
-    If boxes, masks, keypoints, and keypoint_flip_permutation is not None,
-    the function also returns the following tensors.
-
-    boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
-           Boxes are in normalized form meaning their coordinates vary
-           between [0, 1].
-    masks: rank 3 float32 tensor with shape [num_instances, height, width]
-           containing instance masks.
-    keypoints: rank 3 float32 tensor with shape
-               [num_instances, num_keypoints, 2]
-
-  Raises:
-    ValueError: if keypoints are provided but keypoint_flip_permutation is not.
-  """
-  def _flip_image_up_down(image):
-    # flip image
-    image_flipped = tf.image.flip_up_down(image)
-    return image_flipped
-  print("Random Vertical Flip")
-  with tf.name_scope('RandomVerticalFlip', values=[image, boxes]):
-    result = []
-    # random variable defining whether to do flip or not
-    do_a_flip_random = tf.random_uniform([], seed=seed)
-    # flip only if there are bounding boxes in image!
-    do_a_flip_random = tf.logical_and(
-        tf.greater(tf.size(boxes), 0), tf.greater(do_a_flip_random, 0.5))
-
-    # flip image
-    image = tf.cond(do_a_flip_random, lambda: _flip_image_up_down(image), lambda: image)
-    result.append(image)
-
-    # flip boxes
-    if boxes is not None:
-      boxes = tf.cond(
-          do_a_flip_random, lambda: flip_boxes_up_down(boxes), lambda: boxes)
-      result.append(boxes)
 
     return tuple(result)
 
@@ -1679,7 +1612,7 @@ def random_pad_to_aspect_ratio(image,
 
 def random_black_patches(image,
                          max_black_patches=10,
-                         probability=0.6,
+                         probability=0.5,
                          size_to_image_ratio=0.2,
                          random_seed=None):
   """Randomly adds some black patches to the image.

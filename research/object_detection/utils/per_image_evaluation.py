@@ -46,6 +46,62 @@ class PerImageEvaluation(object):
     self.nms_max_output_boxes = nms_max_output_boxes
     self.num_groundtruth_classes = num_groundtruth_classes
 
+  def compute_tree_metrics(
+      self, detected_boxes, detected_scores, detected_class_labels,
+      groundtruth_boxes, groundtruth_class_labels):
+    
+    tree_count_diff = self._compute_tree_count_diff(detected_boxes, detected_scores, groundtruth_boxes)
+    canopy_area_diff, canopy_area_percentage_diff, canopy_area_percentage_bin_diff = self._compute_canopy_area_diff(detected_boxes, detected_scores, groundtruth_boxes)
+    
+    return tree_count_diff, canopy_area_diff, canopy_area_percentage_diff, canopy_area_percentage_bin_diff
+   
+
+  def _compute_tree_count_diff(self, detected_boxes, detected_scores, groundtruth_boxes):
+    groundtruth_boxlist = np_box_list.BoxList(groundtruth_boxes)
+      
+    detected_boxlist = np_box_list.BoxList(detected_boxes)
+    detected_boxlist.add_field('scores', detected_scores)
+      
+    filtered_detected_boxlist = np_box_list_ops.filter_scores_greater_than(
+        detected_boxlist, 0.5)
+          
+    return groundtruth_boxlist.num_boxes() - filtered_detected_boxlist.num_boxes()
+
+  def _compute_canopy_area_diff(self, detected_boxes, detected_scores, groundtruth_boxes):
+    groundtruth_boxlist = np_box_list.BoxList(groundtruth_boxes)
+      
+    detected_boxlist = np_box_list.BoxList(detected_boxes)
+    detected_boxlist.add_field('scores', detected_scores)
+      
+    filtered_detected_boxlist = np_box_list_ops.filter_scores_greater_than(
+        detected_boxlist, 0.5)
+    
+    groundtruth_area = 0.0
+    y_min, x_min, y_max, x_max = groundtruth_boxlist.get_coordinates()
+    for i in range(y_min.size):
+        groundtruth_area += (y_max[i] - y_min[i]) * (x_max[i] - x_min[i])
+    
+    detected_area = 0.0
+    y_min, x_min, y_max, x_max = filtered_detected_boxlist.get_coordinates()
+    for i in range(y_min.size):
+        detected_area += (y_max[i] - y_min[i]) * (x_max[i] - x_min[i])
+    
+    canopy_area_diff = groundtruth_area - detected_area
+    
+    # Images are 100x100 pixels
+    groundtruth_area_percentage = (groundtruth_area / (100 * 100)) * 100
+    groundtruth_area_percentage_bin = groundtruth_area_percentage - groundtruth_area_percentage % 10
+    
+    detected_area_percentage = ((detected_area) / (100 * 100)) * 100
+    detected_area_percentage_bin = detected_area_percentage - detected_area_percentage % 10
+    
+    print("Groundtruth Area percentage {} Detected Area percentage {}".format(groundtruth_area_percentage, detected_area_percentage))
+    
+    canopy_area_percentage_diff = groundtruth_area_percentage - detected_area_percentage
+    canopy_area_percentage_bin_diff = (groundtruth_area_percentage_bin - detected_area_percentage_bin) / 10
+    
+    return canopy_area_diff, canopy_area_percentage_diff, canopy_area_percentage_bin_diff 
+ 
   def compute_object_detection_metrics(
       self, detected_boxes, detected_scores, detected_class_labels,
       groundtruth_boxes, groundtruth_class_labels,

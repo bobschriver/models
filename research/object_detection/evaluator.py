@@ -35,7 +35,9 @@ EVAL_METRICS_CLASS_DICT = {
     'weighted_pascal_voc_metrics':
         object_detection_evaluation.WeightedPascalDetectionEvaluator,
     'open_images_metrics':
-        object_detection_evaluation.OpenImagesDetectionEvaluator
+        object_detection_evaluation.OpenImagesDetectionEvaluator,
+    'tree_metrics':
+        object_detection_evaluation.TreeEvaluator
 }
 
 
