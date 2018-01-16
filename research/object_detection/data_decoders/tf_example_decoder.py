@@ -113,22 +113,9 @@ class TfExampleDecoder(data_decoder.DataDecoder):
               slim_example_decoder.ItemHandlerCallback(
                   ['image/object/mask', 'image/height', 'image/width'],
                   self._reshape_instance_masks))
-    if label_map_proto_file:
-      label_map = label_map_util.get_label_map_dict(label_map_proto_file,
-                                                    use_display_name)
-      # We use a default_value of -1, but we expect all labels to be contained
-      # in the label map.
-      table = tf.contrib.lookup.HashTable(
-          initializer=tf.contrib.lookup.KeyValueTensorInitializer(
-              keys=tf.constant(list(label_map.keys())),
-              values=tf.constant(list(label_map.values()), dtype=tf.int64)),
-          default_value=-1)
-      # If the label_map_proto is provided, try to use it in conjunction with
-      # the class text, and fall back to a materialized ID.
-      label_handler = slim_example_decoder.Tensor('image/object/class/label')
-    else:
-      label_handler = slim_example_decoder.Tensor('image/object/class/label')
-   self.items_to_handlers[
+    
+    label_handler = slim_example_decoder.Tensor('image/object/class/label')
+    self.items_to_handlers[
         fields.InputDataFields.groundtruth_classes] = label_handler
 
   def decode(self, tf_example_string_tensor):
